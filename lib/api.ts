@@ -217,5 +217,44 @@ export const teamAPI = {
     }
 };
 
+// Project Management API
+export const projectAPI = {
+    getAll: (params?: { page?: number; limit?: number; search?: string; status?: string; teamId?: number }) => {
+        const queryParams = new URLSearchParams();
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        if (params?.search) queryParams.append('search', params.search);
+        if (params?.status) queryParams.append('status', params.status);
+        if (params?.teamId) queryParams.append('teamId', params.teamId.toString());
+
+        const query = queryParams.toString();
+        return api.get(`/projects${query ? `?${query}` : ''}`);
+    },
+    getById: (id: number) => api.get(`/projects/${id}`),
+    create: (data: any) => api.post('/projects', data),
+    update: (id: number, data: any) => api.put(`/projects/${id}`, data),
+    delete: (id: number) => api.delete(`/projects/${id}`),
+    getStats: (id: number) => api.get(`/projects/${id}/stats`)
+};
+
+// Customer Management API
+export const customerAPI = {
+    getAll: (params?: { page?: number; limit?: number; search?: string; projectId?: number; custtype?: string }) => {
+        const queryParams = new URLSearchParams();
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        if (params?.search) queryParams.append('search', params.search);
+        if (params?.projectId) queryParams.append('projectId', params.projectId.toString());
+        if (params?.custtype) queryParams.append('custtype', params.custtype);
+
+        const query = queryParams.toString();
+        return api.get(`/customers${query ? `?${query}` : ''}`);
+    },
+    getById: (id: number) => api.get(`/customers/${id}`),
+    create: (data: any) => api.post('/customers', data),
+    update: (id: number, data: any) => api.put(`/customers/${id}`, data),
+    delete: (id: number) => api.delete(`/customers/${id}`)
+};
+
 export { api };
 export default api;

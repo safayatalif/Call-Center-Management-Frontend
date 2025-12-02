@@ -40,9 +40,30 @@ export default function DashboardPage() {
             return;
         }
 
+        // Check user role
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+            try {
+                const user = JSON.parse(userStr);
+                const role = user.role?.toLowerCase();
+
+                // Redirect agents/trainees to My Customers
+                if (role === 'agent' || role === 'trainee') {
+                    router.push('/dashboard/my-customers');
+                    return;
+                }
+
+                setUserName(user.name || 'Admin');
+            } catch (error) {
+                console.error('Failed to parse user:', error);
+            }
+        }
+
         // Fetch dashboard data
         fetchDashboardData();
     }, []);
+
+    const [userName, setUserName] = useState('Admin');
 
     const fetchDashboardData = async () => {
         try {
@@ -180,7 +201,7 @@ export default function DashboardPage() {
             {/* Welcome Section */}
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                    Welcome back, Admin! 👋
+                    Welcome back, {userName}! 👋
                 </h1>
                 <p className="text-gray-600">
                     Here's what's happening with your call center today.

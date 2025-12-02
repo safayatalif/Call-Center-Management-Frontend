@@ -133,6 +133,8 @@ export const authAPI = {
 
     getProfile: () => api.get('/auth/profile'),
 
+    updatePassword: (data: any) => api.put('/auth/update-password', data),
+
     logout: () => api.removeToken(),
 };
 
@@ -273,7 +275,57 @@ export const assignmentAPI = {
         return api.get(`/assignments${query ? `?${query}` : ''}`);
     },
     update: (id: number, data: any) => api.put(`/assignments/${id}`, data),
-    delete: (id: number) => api.delete(`/assignments/${id}`)
+    delete: (id: number) => api.delete(`/assignments/${id}`),
+    getMyCustomers: (params?: {
+        page?: number;
+        limit?: number;
+        search?: string;
+        callstatus?: string;
+        callpriority?: string;
+        projectId?: number;
+        startDate?: string;
+        endDate?: string;
+    }) => {
+        const queryParams = new URLSearchParams();
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        if (params?.search) queryParams.append('search', params.search);
+        if (params?.callstatus) queryParams.append('callstatus', params.callstatus);
+        if (params?.callpriority) queryParams.append('callpriority', params.callpriority);
+        if (params?.projectId) queryParams.append('projectId', params.projectId.toString());
+        if (params?.startDate) queryParams.append('startDate', params.startDate);
+        if (params?.endDate) queryParams.append('endDate', params.endDate);
+
+        const query = queryParams.toString();
+        return api.get(`/assignments/my-customers${query ? `?${query}` : ''}`);
+    },
+    updateInteraction: (id: number, data: any) => api.put(`/assignments/${id}/interaction`, data),
+    getCallHistory: (assignmentId: number) => api.get(`/assignments/${assignmentId}/history`)
+};
+
+// Reports API
+export const reportsAPI = {
+    getAgentPerformance: (params?: { startDate?: string; endDate?: string }) => {
+        const queryParams = new URLSearchParams();
+        if (params?.startDate) queryParams.append('startDate', params.startDate);
+        if (params?.endDate) queryParams.append('endDate', params.endDate);
+        const query = queryParams.toString();
+        return api.get(`/reports/agent-performance${query ? `?${query}` : ''}`);
+    },
+    getProjectPerformance: (params?: { startDate?: string; endDate?: string }) => {
+        const queryParams = new URLSearchParams();
+        if (params?.startDate) queryParams.append('startDate', params.startDate);
+        if (params?.endDate) queryParams.append('endDate', params.endDate);
+        const query = queryParams.toString();
+        return api.get(`/reports/project-performance${query ? `?${query}` : ''}`);
+    },
+    getDailyActivity: (params?: { startDate?: string; endDate?: string }) => {
+        const queryParams = new URLSearchParams();
+        if (params?.startDate) queryParams.append('startDate', params.startDate);
+        if (params?.endDate) queryParams.append('endDate', params.endDate);
+        const query = queryParams.toString();
+        return api.get(`/reports/daily-activity${query ? `?${query}` : ''}`);
+    }
 };
 
 export { api };

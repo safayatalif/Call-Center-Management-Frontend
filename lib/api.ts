@@ -256,5 +256,25 @@ export const customerAPI = {
     delete: (id: number) => api.delete(`/customers/${id}`)
 };
 
+// Assignment Management API
+export const assignmentAPI = {
+    getProjectData: (projectId: number) => api.get(`/assignments/project/${projectId}`),
+    getUnassignedCustomers: (projectId: number) => api.get(`/assignments/project/${projectId}/unassigned`),
+    assignCustomers: (data: any) => api.post('/assignments', data),
+    getAll: (params?: { page?: number; limit?: number; empno_pk?: number; callstatus?: string; callpriority?: string }) => {
+        const queryParams = new URLSearchParams();
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        if (params?.empno_pk) queryParams.append('empno_pk', params.empno_pk.toString());
+        if (params?.callstatus) queryParams.append('callstatus', params.callstatus);
+        if (params?.callpriority) queryParams.append('callpriority', params.callpriority);
+
+        const query = queryParams.toString();
+        return api.get(`/assignments${query ? `?${query}` : ''}`);
+    },
+    update: (id: number, data: any) => api.put(`/assignments/${id}`, data),
+    delete: (id: number) => api.delete(`/assignments/${id}`)
+};
+
 export { api };
 export default api;

@@ -191,5 +191,31 @@ export const employeeAPI = {
     delete: (id: number) => api.delete(`/employees/${id}`),
 };
 
+// Team Management API
+export const teamAPI = {
+    getAll: (params?: { page?: number; limit?: number; search?: string; teamtype?: string }) => {
+        const queryParams = new URLSearchParams();
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        if (params?.search) queryParams.append('search', params.search);
+        if (params?.teamtype) queryParams.append('teamtype', params.teamtype);
+
+        const query = queryParams.toString();
+        return api.get(`/teams${query ? `?${query}` : ''}`);
+    },
+    getById: (id: number) => api.get(`/teams/${id}`),
+    create: (data: any) => api.post('/teams', data),
+    update: (id: number, data: any) => api.put(`/teams/${id}`, data),
+    delete: (id: number) => api.delete(`/teams/${id}`),
+    addMember: (teamId: number, employeeId: number, remarks?: string) =>
+        api.post(`/teams/${teamId}/members`, { employee_id: employeeId, remarks }),
+    removeMember: (teamId: number, memberId: number) =>
+        api.delete(`/teams/${teamId}/members/${memberId}`),
+    getAvailableEmployees: (teamId: number, search?: string) => {
+        const query = search ? `?search=${encodeURIComponent(search)}` : '';
+        return api.get(`/teams/${teamId}/available-employees${query}`);
+    }
+};
+
 export { api };
 export default api;

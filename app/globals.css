@@ -1,0 +1,279 @@
+@import "tailwindcss";
+
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Custom Colors */
+  --color-dark-green: #468847;
+  --color-light-green: #9DC088;
+  --color-yellow: #F6E18D;
+  --color-purple: #7C71C2;
+  --color-black: #222222;
+  --color-white: #FFFFFF;
+}
+
+/* ============================================
+   CUSTOM COLOR PALETTE - Call Center CRM
+   ============================================ */
+:root {
+  /* Primary Colors */
+  --color-dark-green: #468847;
+  --color-light-green: #9DC088;
+  --color-yellow: #F6E18D;
+  --color-purple: #7C71C2;
+  --color-black: #222222;
+  --color-white: #FFFFFF;
+
+  /* Gradient Variations */
+  --gradient-primary: linear-gradient(135deg, #468847 0%, #9DC088 100%);
+  --gradient-secondary: linear-gradient(135deg, #7C71C2 0%, #9DC088 100%);
+  --gradient-accent: linear-gradient(135deg, #F6E18D 0%, #9DC088 100%);
+
+  /* Semantic Colors */
+  --color-success: #468847;
+  --color-warning: #F6E18D;
+  --color-info: #7C71C2;
+  --color-danger: #dc3545;
+
+  /* Background Colors */
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #f8f9fa;
+  --bg-dark: #222222;
+  --bg-card: #FFFFFF;
+
+  /* Text Colors */
+  --text-primary: #222222;
+  --text-secondary: #6c757d;
+  --text-light: #FFFFFF;
+
+  /* Border & Shadow */
+  --border-color: #e9ecef;
+  --shadow-sm: 0 2px 4px rgba(34, 34, 34, 0.05);
+  --shadow-md: 0 4px 12px rgba(34, 34, 34, 0.1);
+  --shadow-lg: 0 8px 24px rgba(34, 34, 34, 0.15);
+  --shadow-xl: 0 12px 40px rgba(34, 34, 34, 0.2);
+
+  /* Glassmorphism */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-shadow: 0 8px 32px rgba(34, 34, 34, 0.1);
+}
+
+/* ============================================
+   BASE STYLES
+   ============================================ */
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Gradient Text */
+  .gradient-text {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Glassmorphism Effect */
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+
+  /* Smooth Transitions */
+  .transition-smooth {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .transition-fast {
+    transition: all 0.15s ease-in-out;
+  }
+}
+
+/* ============================================
+   COMPONENT STYLES
+   ============================================ */
+@layer components {
+
+  /* Buttons */
+  .btn {
+    @apply px-6 py-3 rounded-lg font-medium cursor-pointer inline-flex items-center justify-center gap-2;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .btn-primary {
+    @apply bg-[#468847] text-white hover:bg-[#3a7039] active:scale-95 shadow-md hover:shadow-lg;
+  }
+
+  .btn-secondary {
+    @apply bg-[#7C71C2] text-white hover:bg-[#6a5fb0] active:scale-95 shadow-md hover:shadow-lg;
+  }
+
+  .btn-outline {
+    @apply border-2 border-[#468847] text-[#468847] hover:bg-[#468847] hover:text-white active:scale-95;
+  }
+
+  .btn-ghost {
+    @apply text-[#468847] hover:bg-[#9DC088]/10 active:scale-95;
+  }
+
+  /* Input Fields */
+  .input {
+    @apply w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#468847] focus:outline-none bg-white;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .input-error {
+    @apply border-red-500 focus:border-red-500;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-white rounded-xl shadow-md hover:shadow-lg p-6;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .card-glass {
+    @apply rounded-xl p-6 hover:shadow-xl;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Stats Card */
+  .stat-card {
+    @apply bg-white rounded-xl p-6 shadow-md hover:shadow-xl border-l-4;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+  }
+
+  .badge-success {
+    @apply bg-[#9DC088]/20 text-[#468847];
+  }
+
+  .badge-warning {
+    @apply bg-[#F6E18D]/30 text-[#d4a017];
+  }
+
+  .badge-info {
+    @apply bg-[#7C71C2]/20 text-[#7C71C2];
+  }
+
+  .badge-danger {
+    @apply bg-red-100 text-red-700;
+  }
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.animate-slideInRight {
+  animation: slideInRight 0.5s ease-out;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ============================================
+   SCROLLBAR STYLING
+   ============================================ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-light-green);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-dark-green);
+}
+
+/* ============================================
+   RESPONSIVE UTILITIES
+   ============================================ */
+@media (max-width: 768px) {
+
+  .card,
+  .stat-card {
+    @apply p-4;
+  }
+
+  .btn {
+    @apply px-4 py-2 text-sm;
+  }
+}

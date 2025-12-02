@@ -46,9 +46,9 @@ class ApiClient {
         endpoint: string,
         options: RequestInit = {}
     ): Promise<any> {
-        const headers: HeadersInit = {
+        const headers: Record<string, string> = {
             'Content-Type': 'application/json',
-            ...options.headers,
+            ...(options.headers as Record<string, string>),
         };
 
         if (this.token) {
@@ -152,7 +152,7 @@ export const dashboardAPI = {
     },
 };
 
-// User Management API
+// User Management API (deprecated - use employeeAPI)
 export const userAPI = {
     getAll: (params?: { page?: number; limit?: number; search?: string; role?: string; status?: string }) => {
         const queryParams = new URLSearchParams();
@@ -163,13 +163,32 @@ export const userAPI = {
         if (params?.status) queryParams.append('status', params.status);
 
         const query = queryParams.toString();
-        return api.get(`/users${query ? `?${query}` : ''}`);
+        return api.get(`/employees${query ? `?${query}` : ''}`);
     },
-    getById: (id: number) => api.get(`/users/${id}`),
-    create: (data: any) => api.post('/users', data),
-    update: (id: number, data: any) => api.put(`/users/${id}`, data),
-    delete: (id: number) => api.delete(`/users/${id}`),
-    inactivate: (id: number) => api.patch(`/users/${id}/inactivate`, {}),
+    getById: (id: number) => api.get(`/employees/${id}`),
+    create: (data: any) => api.post('/employees', data),
+    update: (id: number, data: any) => api.put(`/employees/${id}`, data),
+    delete: (id: number) => api.delete(`/employees/${id}`),
+    inactivate: (id: number) => api.patch(`/employees/${id}/inactivate`, {}),
+};
+
+// Employee Management API
+export const employeeAPI = {
+    getAll: (params?: { page?: number; limit?: number; search?: string; role?: string; status?: string }) => {
+        const queryParams = new URLSearchParams();
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        if (params?.search) queryParams.append('search', params.search);
+        if (params?.role) queryParams.append('role', params.role);
+        if (params?.status) queryParams.append('status', params.status);
+
+        const query = queryParams.toString();
+        return api.get(`/employees${query ? `?${query}` : ''}`);
+    },
+    getById: (id: number) => api.get(`/employees/${id}`),
+    create: (data: any) => api.post('/employees', data),
+    update: (id: number, data: any) => api.put(`/employees/${id}`, data),
+    delete: (id: number) => api.delete(`/employees/${id}`),
 };
 
 export { api };

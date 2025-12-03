@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -9,6 +9,15 @@ interface MenuItem {
     nameBn: string;
     href: string;
     icon: JSX.Element;
+    agentOnly?: boolean; // Only for agents/trainees
+    adminOnly?: boolean; // Only for admins/managers
+}
+
+interface User {
+    role: string;
+    name: string;
+    emailidoffical?: string;
+    email?: string;
 }
 
 const menuItems: MenuItem[] = [
@@ -23,6 +32,17 @@ const menuItems: MenuItem[] = [
         ),
     },
     {
+        name: 'My Customers',
+        nameBn: 'আমার কাস্টমার',
+        href: '/dashboard/my-customers',
+        icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+        ),
+        agentOnly: true, // Only agents and trainees see this
+    },
+    {
         name: 'Employees',
         nameBn: 'কর্মচারী',
         href: '/dashboard/employees',
@@ -31,6 +51,7 @@ const menuItems: MenuItem[] = [
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
         ),
+        adminOnly: true, // Only admins and managers
     },
     {
         name: 'Teams',
@@ -41,6 +62,7 @@ const menuItems: MenuItem[] = [
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
         ),
+        adminOnly: true,
     },
     {
         name: 'Projects',
@@ -51,6 +73,7 @@ const menuItems: MenuItem[] = [
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
         ),
+        adminOnly: true,
     },
     {
         name: 'Customers',
@@ -61,6 +84,18 @@ const menuItems: MenuItem[] = [
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
         ),
+        adminOnly: true,
+    },
+    {
+        name: 'Customer Assign',
+        nameBn: 'কাস্টমার অ্যাসাইন',
+        href: '/dashboard/assign-customers',
+        icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+        ),
+        adminOnly: true,
     },
     {
         name: 'Reports',
@@ -68,9 +103,10 @@ const menuItems: MenuItem[] = [
         href: '/dashboard/reports',
         icon: (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
         ),
+        adminOnly: true,
     },
     {
         name: 'Settings',
@@ -82,12 +118,57 @@ const menuItems: MenuItem[] = [
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
         ),
+        adminOnly: true,
     },
 ];
 
 export default function Sidebar() {
     const pathname = usePathname();
     const [collapsed, setCollapsed] = useState(false);
+    const [user, setUser] = useState<User | null>(null);
+
+    useEffect(() => {
+        // Load user from localStorage
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+            try {
+                const userData = JSON.parse(userStr);
+                setUser(userData);
+                console.log('User loaded:', userData); // Debug log
+            } catch (error) {
+                console.error('Failed to parse user:', error);
+            }
+        }
+    }, []);
+
+    const isAgent = () => {
+        if (!user || !user.role) return false;
+        const role = user.role.toLowerCase();
+        return role === 'agent' || role === 'trainee';
+    };
+
+    const isAdmin = () => {
+        if (!user || !user.role) return false;
+        const role = user.role.toLowerCase();
+        return role === 'admin' || role === 'manager';
+    };
+
+    const canViewMenuItem = (item: MenuItem) => {
+        // If it's agent-only, only agents/trainees can see it
+        if (item.agentOnly) {
+            return isAgent();
+        }
+
+        // If it's admin-only, only admins/managers can see it
+        if (item.adminOnly) {
+            return isAdmin();
+        }
+
+        // Otherwise, everyone can see it (like Dashboard)
+        return true;
+    };
+
+    const visibleMenuItems = menuItems.filter(canViewMenuItem);
 
     return (
         <aside
@@ -129,7 +210,7 @@ export default function Sidebar() {
             {/* Navigation */}
             <nav className="flex-1 p-4 overflow-y-auto">
                 <ul className="space-y-2">
-                    {menuItems.map((item) => {
+                    {visibleMenuItems.map((item) => {
                         const isActive = pathname === item.href;
                         return (
                             <li key={item.href}>
@@ -163,12 +244,14 @@ export default function Sidebar() {
             <div className="p-4 border-t border-gray-200">
                 <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
                     <div className="w-10 h-10 bg-gradient-to-br from-[#7C71C2] to-[#9DC088] rounded-full flex items-center justify-center">
-                        <span className="text-white font-semibold">A</span>
+                        <span className="text-white font-semibold">
+                            {user?.name?.charAt(0).toUpperCase() || 'U'}
+                        </span>
                     </div>
                     {!collapsed && (
                         <div className="flex-1">
-                            <p className="font-medium text-sm text-gray-900">Admin User</p>
-                            <p className="text-xs text-gray-500">admin@callcenter.com</p>
+                            <p className="font-medium text-sm text-gray-900">{user?.name || 'User'}</p>
+                            <p className="text-xs text-gray-500">{user?.role || 'Role'}</p>
                         </div>
                     )}
                 </div>

@@ -1,13 +1,36 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { authAPI } from '@/lib/api';
+
+interface User {
+    role: string;
+    name: string;
+    emailidoffical?: string;
+    email?: string;
+}
+
 
 export default function TopNav() {
     const router = useRouter();
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
+    const [user, setUser] = useState<User | null>(null);
+
+    useEffect(() => {
+        // Load user from localStorage
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+            try {
+                const userData = JSON.parse(userStr);
+                setUser(userData);
+                console.log('User loaded:', userData); // Debug log
+            } catch (error) {
+                console.error('Failed to parse user:', error);
+            }
+        }
+    }, []);
 
     const handleLogout = () => {
         authAPI.logout();
@@ -99,8 +122,8 @@ export default function TopNav() {
                                     <span className="text-white font-semibold">A</span>
                                 </div>
                                 <div className="text-left hidden md:block">
-                                    <p className="text-sm font-medium text-gray-900">Admin User</p>
-                                    <p className="text-xs text-gray-500">Administrator</p>
+                                    <p className="text-sm font-medium text-gray-900">{user?.name || 'User'}</p>
+                                    <p className="text-xs text-gray-500">{user?.role || 'Role'}</p>
                                 </div>
                                 <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -111,8 +134,8 @@ export default function TopNav() {
                             {showProfileMenu && (
                                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 animate-fadeIn">
                                     <div className="p-4 border-b border-gray-200">
-                                        <p className="font-medium text-gray-900">Admin User</p>
-                                        <p className="text-sm text-gray-500">admin@callcenter.com</p>
+                                        <p className="font-medium text-gray-900">{user?.name || 'User'}</p>
+                                        <p className="text-sm text-gray-500">{user?.emailidoffical || 'admin@example.com'}</p>
                                     </div>
                                     <div className="p-2">
                                         <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg flex items-center gap-3">

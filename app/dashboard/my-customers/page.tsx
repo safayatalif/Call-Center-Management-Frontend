@@ -84,6 +84,10 @@ export default function MyCustomersPage() {
         followuptime: ''
     });
 
+    // Communication menu state
+    const [openCommMenuId, setOpenCommMenuId] = useState<number | null>(null);
+    const [commMenuPos, setCommMenuPos] = useState<{ top?: number, bottom?: number, right: number }>({ right: 0 });
+
     useEffect(() => {
         fetchProjects();
     }, []);
@@ -228,6 +232,77 @@ export default function MyCustomersPage() {
         if (!dateString) return '-';
         return new Date(dateString).toLocaleString();
     };
+
+    // Communication handlers
+    const handleCommunication = (customer: Customer, platform: string, type: 'call' | 'message') => {
+        const phone = customer.custmobilenumber;
+        const email = customer.custemail;
+
+        switch (platform) {
+            case 'mobile':
+                if (type === 'call') {
+                    window.open(`tel:${phone}`, '_self');
+                } else {
+                    window.open(`sms:${phone}`, '_self');
+                }
+                break;
+
+            case 'whatsapp':
+                if (type === 'call') {
+                    // WhatsApp call
+                    window.open(`https://wa.me/${phone.replace(/[^0-9]/g, '')}`, '_blank');
+                } else {
+                    // WhatsApp message
+                    window.open(`https://wa.me/${phone.replace(/[^0-9]/g, '')}`, '_blank');
+                }
+                break;
+
+            case 'facebook':
+                if (customer.facebook_link) {
+                    window.open(customer.facebook_link, '_blank');
+                } else {
+                    alert('No Facebook link available for this customer');
+                }
+                break;
+
+            case 'linkedin':
+                if (customer.linkedin_link) {
+                    window.open(customer.linkedin_link, '_blank');
+                } else {
+                    alert('No LinkedIn link available for this customer');
+                }
+                break;
+
+            case 'other':
+                if (customer.other_link) {
+                    window.open(customer.other_link, '_blank');
+                } else if (email) {
+                    window.open(`mailto:${email}`, '_self');
+                } else {
+                    alert('No other contact link available for this customer');
+                }
+                break;
+        }
+
+        // Close the menu after action
+        setOpenCommMenuId(null);
+    };
+
+    const toggleCommMenu = (customerId: number) => {
+        setOpenCommMenuId(openCommMenuId === customerId ? null : customerId);
+    };
+
+    // Close menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = () => {
+            if (openCommMenuId !== null) {
+                setOpenCommMenuId(null);
+            }
+        };
+
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, [openCommMenuId]);
 
     return (
         <div>
@@ -458,30 +533,171 @@ export default function MyCustomersPage() {
                                                     💬 {customer.count_message || 0} messages
                                                 </div>
                                             </td>
-                                            <td className="py-4 px-4">
-                                                <div className="flex gap-2 justify-end">
+                                            <td className="py-4 px-4 overflow-visible">
+                                                <div className="relative">
                                                     <button
-                                                        onClick={() => handleOpenInteraction(customer, 'call')}
-                                                        disabled={customer.never_callind === 'Y'}
-                                                        className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                                                        title="Call"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const rect = e.currentTarget.getBoundingClientRect();
+                                                            const spaceBelow = window.innerHeight - rect.bottom;
+                                                            const spaceAbove = rect.top;
+                                                            // If limited space below (less than 400px) and more space above, position upwards
+                                                            if (spaceBelow < 400 && spaceAbove > spaceBelow) {
+                                                                setCommMenuPos({
+                                                                    bottom: window.innerHeight - rect.top + 5,
+                                                                    right: window.innerWidth - rect.right
+                                                                });
+                                                            } else {
+                                                                setCommMenuPos({
+                                                                    top: rect.bottom + 5,
+                                                                    right: window.innerWidth - rect.right
+                                                                });
+                                                            }
+                                                            toggleCommMenu(customer.assignno_pk);
+                                                        }}
+                                                        className="bg-gradient-to-r from-[#468847] to-[#9DC088] hover:opacity-90 text-white px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-2 transition-all shadow-md"
                                                     >
-                                                        📞 Call
+                                                        <span>📞</span>
+                                                        <span>Contact</span>
+                                                        <span className={`transform transition-transform ${openCommMenuId === customer.assignno_pk ? 'rotate-180' : ''}`}>▼</span>
                                                     </button>
-                                                    <button
-                                                        onClick={() => handleOpenInteraction(customer, 'sms')}
-                                                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-medium"
-                                                        title="SMS"
-                                                    >
-                                                        💬 SMS
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleOpenInteraction(customer, 'whatsapp')}
-                                                        className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-xs font-medium"
-                                                        title="WhatsApp"
-                                                    >
-                                                        📱 WA
-                                                    </button>
+
+                                                    {/* Communication Dropdown Menu */}
+                                                    {openCommMenuId === customer.assignno_pk && (
+                                                        <div
+                                                            className="fixed w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-y-auto"
+                                                            style={{
+                                                                top: commMenuPos.top ? `${commMenuPos.top}px` : 'auto',
+                                                                bottom: commMenuPos.bottom ? `${commMenuPos.bottom}px` : 'auto',
+                                                                right: `${commMenuPos.right}px`,
+                                                                maxHeight: '60vh'
+                                                            }}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            <div className="p-2">
+                                                                {/* Mobile */}
+                                                                <div className="border-b border-gray-100 pb-2 mb-2">
+                                                                    <div className="text-xs font-semibold text-gray-500 px-3 py-1">📱 Mobile</div>
+                                                                    <button
+                                                                        onClick={() => handleCommunication(customer, 'mobile', 'call')}
+                                                                        disabled={customer.never_callind === 'Y'}
+                                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    >
+                                                                        <span className="text-green-600">📞</span>
+                                                                        <span>Call {customer.custmobilenumber}</span>
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleCommunication(customer, 'mobile', 'message')}
+                                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded text-sm flex items-center gap-2"
+                                                                    >
+                                                                        <span className="text-blue-600">💬</span>
+                                                                        <span>Send SMS</span>
+                                                                    </button>
+                                                                </div>
+
+                                                                {/* WhatsApp */}
+                                                                <div className="border-b border-gray-100 pb-2 mb-2">
+                                                                    <div className="text-xs font-semibold text-gray-500 px-3 py-1">💚 WhatsApp</div>
+                                                                    <button
+                                                                        onClick={() => handleCommunication(customer, 'whatsapp', 'call')}
+                                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded text-sm flex items-center gap-2"
+                                                                    >
+                                                                        <span className="text-green-600">📞</span>
+                                                                        <span>WhatsApp Call</span>
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleCommunication(customer, 'whatsapp', 'message')}
+                                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded text-sm flex items-center gap-2"
+                                                                    >
+                                                                        <span className="text-green-600">💬</span>
+                                                                        <span>WhatsApp Message</span>
+                                                                    </button>
+                                                                </div>
+
+                                                                {/* Facebook */}
+                                                                <div className="border-b border-gray-100 pb-2 mb-2">
+                                                                    <div className="text-xs font-semibold text-gray-500 px-3 py-1">💙 Facebook</div>
+                                                                    <button
+                                                                        onClick={() => handleCommunication(customer, 'facebook', 'call')}
+                                                                        disabled={!customer.facebook_link}
+                                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    >
+                                                                        <span className="text-blue-700">📞</span>
+                                                                        <span>Facebook Call</span>
+                                                                        {!customer.facebook_link && <span className="text-xs text-gray-400 ml-auto">N/A</span>}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleCommunication(customer, 'facebook', 'message')}
+                                                                        disabled={!customer.facebook_link}
+                                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    >
+                                                                        <span className="text-blue-700">💬</span>
+                                                                        <span>Facebook Message</span>
+                                                                        {!customer.facebook_link && <span className="text-xs text-gray-400 ml-auto">N/A</span>}
+                                                                    </button>
+                                                                </div>
+
+                                                                {/* LinkedIn */}
+                                                                <div className="border-b border-gray-100 pb-2 mb-2">
+                                                                    <div className="text-xs font-semibold text-gray-500 px-3 py-1">💼 LinkedIn</div>
+                                                                    <button
+                                                                        onClick={() => handleCommunication(customer, 'linkedin', 'call')}
+                                                                        disabled={!customer.linkedin_link}
+                                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    >
+                                                                        <span className="text-blue-600">📞</span>
+                                                                        <span>LinkedIn Call</span>
+                                                                        {!customer.linkedin_link && <span className="text-xs text-gray-400 ml-auto">N/A</span>}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleCommunication(customer, 'linkedin', 'message')}
+                                                                        disabled={!customer.linkedin_link}
+                                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    >
+                                                                        <span className="text-blue-600">💬</span>
+                                                                        <span>LinkedIn Message</span>
+                                                                        {!customer.linkedin_link && <span className="text-xs text-gray-400 ml-auto">N/A</span>}
+                                                                    </button>
+                                                                </div>
+
+                                                                {/* Other */}
+                                                                <div>
+                                                                    <div className="text-xs font-semibold text-gray-500 px-3 py-1">🔗 Other</div>
+                                                                    <button
+                                                                        onClick={() => handleCommunication(customer, 'other', 'call')}
+                                                                        disabled={!customer.other_link && !customer.custemail}
+                                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    >
+                                                                        <span className="text-purple-600">📞</span>
+                                                                        <span>Other Call</span>
+                                                                        {!customer.other_link && !customer.custemail && <span className="text-xs text-gray-400 ml-auto">N/A</span>}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleCommunication(customer, 'other', 'message')}
+                                                                        disabled={!customer.other_link && !customer.custemail}
+                                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    >
+                                                                        <span className="text-purple-600">💬</span>
+                                                                        <span>Other Message {customer.custemail && '(Email)'}</span>
+                                                                        {!customer.other_link && !customer.custemail && <span className="text-xs text-gray-400 ml-auto">N/A</span>}
+                                                                    </button>
+                                                                </div>
+
+                                                                {/* Record Interaction Button */}
+                                                                <div className="mt-2 pt-2 border-t border-gray-200">
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            handleOpenInteraction(customer, 'call');
+                                                                            setOpenCommMenuId(null);
+                                                                        }}
+                                                                        className="w-full bg-gradient-to-r from-[#468847] to-[#9DC088] hover:opacity-90 text-white px-3 py-2 rounded text-sm font-medium"
+                                                                    >
+                                                                        📝 Record Interaction
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { assignmentAPI } from '@/lib/api';
+import { assignmentAPI, projectAPI } from '@/lib/api';
 
 interface Customer {
     assignno_pk: number;
@@ -37,6 +37,18 @@ interface Pagination {
     limit: number;
 }
 
+interface Project {
+    projectno_pk: number;
+    projectname: string;
+    projectcode: string;
+}
+
+// Helper function to get today's date in YYYY-MM-DD format
+const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+};
+
 export default function MyCustomersPage() {
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(true);
@@ -51,8 +63,14 @@ export default function MyCustomersPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [priorityFilter, setPriorityFilter] = useState('');
+    const [projectFilter, setProjectFilter] = useState('');
+    const [targetDateFrom, setTargetDateFrom] = useState(getTodayDate());
+    const [targetDateTo, setTargetDateTo] = useState(getTodayDate());
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
+
+    // Projects list for dropdown
+    const [projects, setProjects] = useState<Project[]>([]);
 
     // Modal states
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -67,8 +85,23 @@ export default function MyCustomersPage() {
     });
 
     useEffect(() => {
+        fetchProjects();
+    }, []);
+
+    useEffect(() => {
         fetchMyCustomers();
-    }, [currentPage, itemsPerPage, searchTerm, statusFilter, priorityFilter]);
+    }, [currentPage, itemsPerPage, searchTerm, statusFilter, priorityFilter, projectFilter, targetDateFrom, targetDateTo]);
+
+    const fetchProjects = async () => {
+        try {
+            const response = await projectAPI.getAll({ limit: 1000 }); // Get all projects
+            if (response.success) {
+                setProjects(response.data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch projects:', error);
+        }
+    };
 
     const fetchMyCustomers = async () => {
         try {
@@ -78,7 +111,10 @@ export default function MyCustomersPage() {
                 limit: itemsPerPage,
                 search: searchTerm,
                 callstatus: statusFilter,
-                callpriority: priorityFilter
+                callpriority: priorityFilter,
+                projectId: projectFilter ? parseInt(projectFilter) : undefined,
+                startDate: targetDateFrom || undefined,
+                endDate: targetDateTo || undefined
             });
 
             if (response.success) {
@@ -92,6 +128,17 @@ export default function MyCustomersPage() {
         } finally {
             setLoading(false);
         }
+    };
+
+
+    // Helper function to check if a date is in the past
+    const isTargetDateInPast = (targetDate: string | null) => {
+        if (!targetDate) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const target = new Date(targetDate);
+        target.setHours(0, 0, 0, 0);
+        return target < today;
     };
 
     const handleOpenInteraction = (customer: Customer, type: 'call' | 'sms' | 'whatsapp') => {
@@ -217,7 +264,7 @@ export default function MyCustomersPage() {
 
             {/* Filters */}
             <div className="card mb-6">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
                         <input
@@ -226,6 +273,51 @@ export default function MyCustomersPage() {
                             value={searchTerm}
                             onChange={(e) => {
                                 setSearchTerm(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847]"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Project</label>
+                        <select
+                            value={projectFilter}
+                            onChange={(e) => {
+                                setProjectFilter(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847]"
+                        >
+                            <option value="">All Projects</option>
+                            {projects.map((project) => (
+                                <option key={project.projectno_pk} value={project.projectno_pk}>
+                                    {project.projectname}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Target Date (From)</label>
+                        <input
+                            type="date"
+                            value={targetDateFrom}
+                            onChange={(e) => {
+                                setTargetDateFrom(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847]"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Target Date (To)</label>
+                        <input
+                            type="date"
+                            value={targetDateTo}
+                            onChange={(e) => {
+                                setTargetDateTo(e.target.value);
                                 setCurrentPage(1);
                             }}
                             className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847]"
@@ -270,16 +362,18 @@ export default function MyCustomersPage() {
                             <option value="Low">Low</option>
                         </select>
                     </div>
+                </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Per Page</label>
+                <div className="mt-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium text-gray-700">Per Page:</label>
                         <select
                             value={itemsPerPage}
                             onChange={(e) => {
                                 setItemsPerPage(parseInt(e.target.value));
                                 setCurrentPage(1);
                             }}
-                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847]"
+                            className="border border-gray-300 rounded-lg px-3 py-1 focus:outline-none focus:border-[#468847]"
                         >
                             <option value="5">5</option>
                             <option value="10">10</option>
@@ -287,6 +381,21 @@ export default function MyCustomersPage() {
                             <option value="50">50</option>
                         </select>
                     </div>
+
+                    <button
+                        onClick={() => {
+                            setSearchTerm('');
+                            setProjectFilter('');
+                            setTargetDateFrom(getTodayDate());
+                            setTargetDateTo(getTodayDate());
+                            setStatusFilter('');
+                            setPriorityFilter('');
+                            setCurrentPage(1);
+                        }}
+                        className="text-sm text-[#468847] hover:text-[#356635] font-medium"
+                    >
+                        Reset Filters
+                    </button>
                 </div>
             </div>
 
@@ -461,12 +570,34 @@ export default function MyCustomersPage() {
                         </div>
 
                         <div className="p-6 space-y-4">
+                            {/* Warning for past target dates */}
+                            {isTargetDateInPast(selectedCustomer.calltargetdate) && (
+                                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                                    <div className="flex items-start gap-3">
+                                        <span className="text-2xl">⚠️</span>
+                                        <div>
+                                            <h4 className="text-sm font-semibold text-red-800">Past Target Date</h4>
+                                            <p className="text-sm text-red-700 mt-1">
+                                                This customer's target date ({formatDate(selectedCustomer.calltargetdate)}) is in the past.
+                                                You cannot update or modify data for previous dates.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Customer Info */}
                             <div className="p-4 bg-gray-50 rounded-lg">
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div>
                                         <span className="text-gray-600">Project:</span>
                                         <span className="ml-2 font-medium">{selectedCustomer.projectname}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-600">Target Date:</span>
+                                        <span className={`ml-2 font-medium ${isTargetDateInPast(selectedCustomer.calltargetdate) ? 'text-red-600' : 'text-gray-900'}`}>
+                                            {formatDate(selectedCustomer.calltargetdate)}
+                                        </span>
                                     </div>
                                     <div>
                                         <span className="text-gray-600">Area:</span>
@@ -489,8 +620,9 @@ export default function MyCustomersPage() {
                                 <select
                                     value={interactionData.callstatus}
                                     onChange={(e) => setInteractionData({ ...interactionData, callstatus: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847]"
+                                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847] disabled:bg-gray-100 disabled:cursor-not-allowed"
                                     required
+                                    disabled={isTargetDateInPast(selectedCustomer.calltargetdate)}
                                 >
                                     <option value="">Select result</option>
                                     <option value="Sales Generated">Sales Generated</option>
@@ -510,8 +642,9 @@ export default function MyCustomersPage() {
                                     value={interactionData.callstatus_text}
                                     onChange={(e) => setInteractionData({ ...interactionData, callstatus_text: e.target.value })}
                                     rows={3}
-                                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847]"
+                                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847] disabled:bg-gray-100 disabled:cursor-not-allowed"
                                     placeholder="Enter notes about this interaction..."
+                                    disabled={isTargetDateInPast(selectedCustomer.calltargetdate)}
                                 />
                             </div>
 
@@ -525,7 +658,8 @@ export default function MyCustomersPage() {
                                             type="date"
                                             value={interactionData.followupdate}
                                             onChange={(e) => setInteractionData({ ...interactionData, followupdate: e.target.value })}
-                                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847]"
+                                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847] disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                            disabled={isTargetDateInPast(selectedCustomer.calltargetdate)}
                                         />
                                     </div>
                                     <div>
@@ -534,7 +668,8 @@ export default function MyCustomersPage() {
                                             type="time"
                                             value={interactionData.followuptime}
                                             onChange={(e) => setInteractionData({ ...interactionData, followuptime: e.target.value })}
-                                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847]"
+                                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847] disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                            disabled={isTargetDateInPast(selectedCustomer.calltargetdate)}
                                         />
                                     </div>
                                 </div>
@@ -550,8 +685,9 @@ export default function MyCustomersPage() {
                             </button>
                             <button
                                 onClick={handleSubmitInteraction}
-                                disabled={!interactionData.callstatus}
+                                disabled={!interactionData.callstatus || isTargetDateInPast(selectedCustomer.calltargetdate)}
                                 className="bg-gradient-to-r from-[#468847] to-[#9DC088] hover:opacity-90 text-white px-6 py-2 rounded-lg transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={isTargetDateInPast(selectedCustomer.calltargetdate) ? "Cannot update data for past target dates" : ""}
                             >
                                 Save Interaction
                             </button>

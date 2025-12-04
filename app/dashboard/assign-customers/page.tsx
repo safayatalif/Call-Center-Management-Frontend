@@ -39,8 +39,10 @@ export default function CustomerAssignPage() {
     const [loading, setLoading] = useState(false);
 
     // Assignment form data
+    const today = new Date().toISOString().split("T")[0];
+
     const [assignmentData, setAssignmentData] = useState({
-        calltargetdate: '',
+        calltargetdate: today,
         callpriority: 'Low'
     });
 

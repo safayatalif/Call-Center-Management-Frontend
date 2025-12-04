@@ -86,7 +86,7 @@ export default function CustomersPage() {
         never_callind_message: '',
         custgender: '',
         custbirthdate: '',
-        custtype: 'Undefined',
+        custtype: 'New',
         cust_labeling: '',
         au_orgno: 0
     });
@@ -173,7 +173,7 @@ export default function CustomersPage() {
                 never_callind_message: customer.never_callind_message || '',
                 custgender: customer.custgender || '',
                 custbirthdate: customer.custbirthdate || '',
-                custtype: customer.custtype || 'Undefined',
+                custtype: customer.custtype || 'New',
                 cust_labeling: customer.cust_labeling || '',
                 au_orgno: 0
             });
@@ -199,7 +199,7 @@ export default function CustomersPage() {
                 never_callind_message: '',
                 custgender: '',
                 custbirthdate: '',
-                custtype: 'Undefined',
+                custtype: 'New',
                 cust_labeling: '',
                 au_orgno: 0
             });

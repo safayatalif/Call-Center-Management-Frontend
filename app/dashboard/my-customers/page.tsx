@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { assignmentAPI } from '@/lib/api';
+import { assignmentAPI, projectAPI } from '@/lib/api';
 
 interface Customer {
     assignno_pk: number;
@@ -37,6 +37,18 @@ interface Pagination {
     limit: number;
 }
 
+interface Project {
+    projectno_pk: number;
+    projectname: string;
+    projectcode: string;
+}
+
+// Helper function to get today's date in YYYY-MM-DD format
+const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+};
+
 export default function MyCustomersPage() {
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(true);
@@ -51,8 +63,14 @@ export default function MyCustomersPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [priorityFilter, setPriorityFilter] = useState('');
+    const [projectFilter, setProjectFilter] = useState('');
+    const [targetDateFrom, setTargetDateFrom] = useState(getTodayDate());
+    const [targetDateTo, setTargetDateTo] = useState(getTodayDate());
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
+
+    // Projects list for dropdown
+    const [projects, setProjects] = useState<Project[]>([]);
 
     // Modal states
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -66,9 +84,28 @@ export default function MyCustomersPage() {
         followuptime: ''
     });
 
+    // Communication menu state
+    const [openCommMenuId, setOpenCommMenuId] = useState<number | null>(null);
+    const [commMenuPos, setCommMenuPos] = useState<{ top?: number, bottom?: number, right: number }>({ right: 0 });
+
+    useEffect(() => {
+        fetchProjects();
+    }, []);
+
     useEffect(() => {
         fetchMyCustomers();
-    }, [currentPage, itemsPerPage, searchTerm, statusFilter, priorityFilter]);
+    }, [currentPage, itemsPerPage, searchTerm, statusFilter, priorityFilter, projectFilter, targetDateFrom, targetDateTo]);
+
+    const fetchProjects = async () => {
+        try {
+            const response = await projectAPI.getAll({ limit: 1000 }); // Get all projects
+            if (response.success) {
+                setProjects(response.data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch projects:', error);
+        }
+    };
 
     const fetchMyCustomers = async () => {
         try {
@@ -78,7 +115,10 @@ export default function MyCustomersPage() {
                 limit: itemsPerPage,
                 search: searchTerm,
                 callstatus: statusFilter,
-                callpriority: priorityFilter
+                callpriority: priorityFilter,
+                projectId: projectFilter ? parseInt(projectFilter) : undefined,
+                startDate: targetDateFrom || undefined,
+                endDate: targetDateTo || undefined
             });
 
             if (response.success) {
@@ -92,6 +132,17 @@ export default function MyCustomersPage() {
         } finally {
             setLoading(false);
         }
+    };
+
+
+    // Helper function to check if a date is in the past
+    const isTargetDateInPast = (targetDate: string | null) => {
+        if (!targetDate) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const target = new Date(targetDate);
+        target.setHours(0, 0, 0, 0);
+        return target < today;
     };
 
     const handleOpenInteraction = (customer: Customer, type: 'call' | 'sms' | 'whatsapp') => {
@@ -182,6 +233,77 @@ export default function MyCustomersPage() {
         return new Date(dateString).toLocaleString();
     };
 
+    // Communication handlers
+    const handleCommunication = (customer: Customer, platform: string, type: 'call' | 'message') => {
+        const phone = customer.custmobilenumber;
+        const email = customer.custemail;
+
+        switch (platform) {
+            case 'mobile':
+                if (type === 'call') {
+                    window.open(`tel:${phone}`, '_self');
+                } else {
+                    window.open(`sms:${phone}`, '_self');
+                }
+                break;
+
+            case 'whatsapp':
+                if (type === 'call') {
+                    // WhatsApp call
+                    window.open(`https://wa.me/${phone.replace(/[^0-9]/g, '')}`, '_blank');
+                } else {
+                    // WhatsApp message
+                    window.open(`https://wa.me/${phone.replace(/[^0-9]/g, '')}`, '_blank');
+                }
+                break;
+
+            case 'facebook':
+                if (customer.facebook_link) {
+                    window.open(customer.facebook_link, '_blank');
+                } else {
+                    alert('No Facebook link available for this customer');
+                }
+                break;
+
+            case 'linkedin':
+                if (customer.linkedin_link) {
+                    window.open(customer.linkedin_link, '_blank');
+                } else {
+                    alert('No LinkedIn link available for this customer');
+                }
+                break;
+
+            case 'other':
+                if (customer.other_link) {
+                    window.open(customer.other_link, '_blank');
+                } else if (email) {
+                    window.open(`mailto:${email}`, '_self');
+                } else {
+                    alert('No other contact link available for this customer');
+                }
+                break;
+        }
+
+        // Close the menu after action
+        setOpenCommMenuId(null);
+    };
+
+    const toggleCommMenu = (customerId: number) => {
+        setOpenCommMenuId(openCommMenuId === customerId ? null : customerId);
+    };
+
+    // Close menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = () => {
+            if (openCommMenuId !== null) {
+                setOpenCommMenuId(null);
+            }
+        };
+
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, [openCommMenuId]);
+
     return (
         <div>
             <div className="mb-6">
@@ -217,7 +339,7 @@ export default function MyCustomersPage() {
 
             {/* Filters */}
             <div className="card mb-6">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
                         <input
@@ -226,6 +348,51 @@ export default function MyCustomersPage() {
                             value={searchTerm}
                             onChange={(e) => {
                                 setSearchTerm(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847]"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Project</label>
+                        <select
+                            value={projectFilter}
+                            onChange={(e) => {
+                                setProjectFilter(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847]"
+                        >
+                            <option value="">All Projects</option>
+                            {projects.map((project) => (
+                                <option key={project.projectno_pk} value={project.projectno_pk}>
+                                    {project.projectname}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Target Date (From)</label>
+                        <input
+                            type="date"
+                            value={targetDateFrom}
+                            onChange={(e) => {
+                                setTargetDateFrom(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847]"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Target Date (To)</label>
+                        <input
+                            type="date"
+                            value={targetDateTo}
+                            onChange={(e) => {
+                                setTargetDateTo(e.target.value);
                                 setCurrentPage(1);
                             }}
                             className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847]"
@@ -270,16 +437,18 @@ export default function MyCustomersPage() {
                             <option value="Low">Low</option>
                         </select>
                     </div>
+                </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Per Page</label>
+                <div className="mt-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium text-gray-700">Per Page:</label>
                         <select
                             value={itemsPerPage}
                             onChange={(e) => {
                                 setItemsPerPage(parseInt(e.target.value));
                                 setCurrentPage(1);
                             }}
-                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847]"
+                            className="border border-gray-300 rounded-lg px-3 py-1 focus:outline-none focus:border-[#468847]"
                         >
                             <option value="5">5</option>
                             <option value="10">10</option>
@@ -287,6 +456,21 @@ export default function MyCustomersPage() {
                             <option value="50">50</option>
                         </select>
                     </div>
+
+                    <button
+                        onClick={() => {
+                            setSearchTerm('');
+                            setProjectFilter('');
+                            setTargetDateFrom(getTodayDate());
+                            setTargetDateTo(getTodayDate());
+                            setStatusFilter('');
+                            setPriorityFilter('');
+                            setCurrentPage(1);
+                        }}
+                        className="text-sm text-[#468847] hover:text-[#356635] font-medium"
+                    >
+                        Reset Filters
+                    </button>
                 </div>
             </div>
 
@@ -349,30 +533,171 @@ export default function MyCustomersPage() {
                                                     💬 {customer.count_message || 0} messages
                                                 </div>
                                             </td>
-                                            <td className="py-4 px-4">
-                                                <div className="flex gap-2 justify-end">
+                                            <td className="py-4 px-4 overflow-visible">
+                                                <div className="relative">
                                                     <button
-                                                        onClick={() => handleOpenInteraction(customer, 'call')}
-                                                        disabled={customer.never_callind === 'Y'}
-                                                        className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                                                        title="Call"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const rect = e.currentTarget.getBoundingClientRect();
+                                                            const spaceBelow = window.innerHeight - rect.bottom;
+                                                            const spaceAbove = rect.top;
+                                                            // If limited space below (less than 400px) and more space above, position upwards
+                                                            if (spaceBelow < 400 && spaceAbove > spaceBelow) {
+                                                                setCommMenuPos({
+                                                                    bottom: window.innerHeight - rect.top + 5,
+                                                                    right: window.innerWidth - rect.right
+                                                                });
+                                                            } else {
+                                                                setCommMenuPos({
+                                                                    top: rect.bottom + 5,
+                                                                    right: window.innerWidth - rect.right
+                                                                });
+                                                            }
+                                                            toggleCommMenu(customer.assignno_pk);
+                                                        }}
+                                                        className="bg-gradient-to-r from-[#468847] to-[#9DC088] hover:opacity-90 text-white px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-2 transition-all shadow-md"
                                                     >
-                                                        📞 Call
+                                                        <span>📞</span>
+                                                        <span>Contact</span>
+                                                        <span className={`transform transition-transform ${openCommMenuId === customer.assignno_pk ? 'rotate-180' : ''}`}>▼</span>
                                                     </button>
-                                                    <button
-                                                        onClick={() => handleOpenInteraction(customer, 'sms')}
-                                                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-medium"
-                                                        title="SMS"
-                                                    >
-                                                        💬 SMS
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleOpenInteraction(customer, 'whatsapp')}
-                                                        className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-xs font-medium"
-                                                        title="WhatsApp"
-                                                    >
-                                                        📱 WA
-                                                    </button>
+
+                                                    {/* Communication Dropdown Menu */}
+                                                    {openCommMenuId === customer.assignno_pk && (
+                                                        <div
+                                                            className="fixed w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-y-auto"
+                                                            style={{
+                                                                top: commMenuPos.top ? `${commMenuPos.top}px` : 'auto',
+                                                                bottom: commMenuPos.bottom ? `${commMenuPos.bottom}px` : 'auto',
+                                                                right: `${commMenuPos.right}px`,
+                                                                maxHeight: '60vh'
+                                                            }}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            <div className="p-2">
+                                                                {/* Mobile */}
+                                                                <div className="border-b border-gray-100 pb-2 mb-2">
+                                                                    <div className="text-xs font-semibold text-gray-500 px-3 py-1">📱 Mobile</div>
+                                                                    <button
+                                                                        onClick={() => handleCommunication(customer, 'mobile', 'call')}
+                                                                        disabled={customer.never_callind === 'Y'}
+                                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    >
+                                                                        <span className="text-green-600">📞</span>
+                                                                        <span>Call {customer.custmobilenumber}</span>
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleCommunication(customer, 'mobile', 'message')}
+                                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded text-sm flex items-center gap-2"
+                                                                    >
+                                                                        <span className="text-blue-600">💬</span>
+                                                                        <span>Send SMS</span>
+                                                                    </button>
+                                                                </div>
+
+                                                                {/* WhatsApp */}
+                                                                <div className="border-b border-gray-100 pb-2 mb-2">
+                                                                    <div className="text-xs font-semibold text-gray-500 px-3 py-1">💚 WhatsApp</div>
+                                                                    <button
+                                                                        onClick={() => handleCommunication(customer, 'whatsapp', 'call')}
+                                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded text-sm flex items-center gap-2"
+                                                                    >
+                                                                        <span className="text-green-600">📞</span>
+                                                                        <span>WhatsApp Call</span>
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleCommunication(customer, 'whatsapp', 'message')}
+                                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded text-sm flex items-center gap-2"
+                                                                    >
+                                                                        <span className="text-green-600">💬</span>
+                                                                        <span>WhatsApp Message</span>
+                                                                    </button>
+                                                                </div>
+
+                                                                {/* Facebook */}
+                                                                <div className="border-b border-gray-100 pb-2 mb-2">
+                                                                    <div className="text-xs font-semibold text-gray-500 px-3 py-1">💙 Facebook</div>
+                                                                    <button
+                                                                        onClick={() => handleCommunication(customer, 'facebook', 'call')}
+                                                                        disabled={!customer.facebook_link}
+                                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    >
+                                                                        <span className="text-blue-700">📞</span>
+                                                                        <span>Facebook Call</span>
+                                                                        {!customer.facebook_link && <span className="text-xs text-gray-400 ml-auto">N/A</span>}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleCommunication(customer, 'facebook', 'message')}
+                                                                        disabled={!customer.facebook_link}
+                                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    >
+                                                                        <span className="text-blue-700">💬</span>
+                                                                        <span>Facebook Message</span>
+                                                                        {!customer.facebook_link && <span className="text-xs text-gray-400 ml-auto">N/A</span>}
+                                                                    </button>
+                                                                </div>
+
+                                                                {/* LinkedIn */}
+                                                                <div className="border-b border-gray-100 pb-2 mb-2">
+                                                                    <div className="text-xs font-semibold text-gray-500 px-3 py-1">💼 LinkedIn</div>
+                                                                    <button
+                                                                        onClick={() => handleCommunication(customer, 'linkedin', 'call')}
+                                                                        disabled={!customer.linkedin_link}
+                                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    >
+                                                                        <span className="text-blue-600">📞</span>
+                                                                        <span>LinkedIn Call</span>
+                                                                        {!customer.linkedin_link && <span className="text-xs text-gray-400 ml-auto">N/A</span>}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleCommunication(customer, 'linkedin', 'message')}
+                                                                        disabled={!customer.linkedin_link}
+                                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    >
+                                                                        <span className="text-blue-600">💬</span>
+                                                                        <span>LinkedIn Message</span>
+                                                                        {!customer.linkedin_link && <span className="text-xs text-gray-400 ml-auto">N/A</span>}
+                                                                    </button>
+                                                                </div>
+
+                                                                {/* Other */}
+                                                                <div>
+                                                                    <div className="text-xs font-semibold text-gray-500 px-3 py-1">🔗 Other</div>
+                                                                    <button
+                                                                        onClick={() => handleCommunication(customer, 'other', 'call')}
+                                                                        disabled={!customer.other_link && !customer.custemail}
+                                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    >
+                                                                        <span className="text-purple-600">📞</span>
+                                                                        <span>Other Call</span>
+                                                                        {!customer.other_link && !customer.custemail && <span className="text-xs text-gray-400 ml-auto">N/A</span>}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleCommunication(customer, 'other', 'message')}
+                                                                        disabled={!customer.other_link && !customer.custemail}
+                                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    >
+                                                                        <span className="text-purple-600">💬</span>
+                                                                        <span>Other Message {customer.custemail && '(Email)'}</span>
+                                                                        {!customer.other_link && !customer.custemail && <span className="text-xs text-gray-400 ml-auto">N/A</span>}
+                                                                    </button>
+                                                                </div>
+
+                                                                {/* Record Interaction Button */}
+                                                                <div className="mt-2 pt-2 border-t border-gray-200">
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            handleOpenInteraction(customer, 'call');
+                                                                            setOpenCommMenuId(null);
+                                                                        }}
+                                                                        className="w-full bg-gradient-to-r from-[#468847] to-[#9DC088] hover:opacity-90 text-white px-3 py-2 rounded text-sm font-medium"
+                                                                    >
+                                                                        📝 Record Interaction
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -461,12 +786,34 @@ export default function MyCustomersPage() {
                         </div>
 
                         <div className="p-6 space-y-4">
+                            {/* Warning for past target dates */}
+                            {isTargetDateInPast(selectedCustomer.calltargetdate) && (
+                                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                                    <div className="flex items-start gap-3">
+                                        <span className="text-2xl">⚠️</span>
+                                        <div>
+                                            <h4 className="text-sm font-semibold text-red-800">Past Target Date</h4>
+                                            <p className="text-sm text-red-700 mt-1">
+                                                This customer's target date ({formatDate(selectedCustomer.calltargetdate)}) is in the past.
+                                                You cannot update or modify data for previous dates.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Customer Info */}
                             <div className="p-4 bg-gray-50 rounded-lg">
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div>
                                         <span className="text-gray-600">Project:</span>
                                         <span className="ml-2 font-medium">{selectedCustomer.projectname}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-600">Target Date:</span>
+                                        <span className={`ml-2 font-medium ${isTargetDateInPast(selectedCustomer.calltargetdate) ? 'text-red-600' : 'text-gray-900'}`}>
+                                            {formatDate(selectedCustomer.calltargetdate)}
+                                        </span>
                                     </div>
                                     <div>
                                         <span className="text-gray-600">Area:</span>
@@ -489,8 +836,9 @@ export default function MyCustomersPage() {
                                 <select
                                     value={interactionData.callstatus}
                                     onChange={(e) => setInteractionData({ ...interactionData, callstatus: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847]"
+                                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847] disabled:bg-gray-100 disabled:cursor-not-allowed"
                                     required
+                                    disabled={isTargetDateInPast(selectedCustomer.calltargetdate)}
                                 >
                                     <option value="">Select result</option>
                                     <option value="Sales Generated">Sales Generated</option>
@@ -510,8 +858,9 @@ export default function MyCustomersPage() {
                                     value={interactionData.callstatus_text}
                                     onChange={(e) => setInteractionData({ ...interactionData, callstatus_text: e.target.value })}
                                     rows={3}
-                                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847]"
+                                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847] disabled:bg-gray-100 disabled:cursor-not-allowed"
                                     placeholder="Enter notes about this interaction..."
+                                    disabled={isTargetDateInPast(selectedCustomer.calltargetdate)}
                                 />
                             </div>
 
@@ -525,7 +874,8 @@ export default function MyCustomersPage() {
                                             type="date"
                                             value={interactionData.followupdate}
                                             onChange={(e) => setInteractionData({ ...interactionData, followupdate: e.target.value })}
-                                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847]"
+                                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847] disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                            disabled={isTargetDateInPast(selectedCustomer.calltargetdate)}
                                         />
                                     </div>
                                     <div>
@@ -534,7 +884,8 @@ export default function MyCustomersPage() {
                                             type="time"
                                             value={interactionData.followuptime}
                                             onChange={(e) => setInteractionData({ ...interactionData, followuptime: e.target.value })}
-                                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847]"
+                                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-[#468847] disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                            disabled={isTargetDateInPast(selectedCustomer.calltargetdate)}
                                         />
                                     </div>
                                 </div>
@@ -550,8 +901,9 @@ export default function MyCustomersPage() {
                             </button>
                             <button
                                 onClick={handleSubmitInteraction}
-                                disabled={!interactionData.callstatus}
+                                disabled={!interactionData.callstatus || isTargetDateInPast(selectedCustomer.calltargetdate)}
                                 className="bg-gradient-to-r from-[#468847] to-[#9DC088] hover:opacity-90 text-white px-6 py-2 rounded-lg transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={isTargetDateInPast(selectedCustomer.calltargetdate) ? "Cannot update data for past target dates" : ""}
                             >
                                 Save Interaction
                             </button>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -8,7 +8,7 @@ interface MenuItem {
     name: string;
     nameBn: string;
     href: string;
-    icon: JSX.Element;
+    icon: ReactNode;
     agentOnly?: boolean; // Only for agents/trainees
     adminOnly?: boolean; // Only for admins/managers
 }

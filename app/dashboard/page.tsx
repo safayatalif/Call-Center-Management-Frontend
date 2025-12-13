@@ -205,24 +205,18 @@ export default function DashboardPage() {
     },
   ];
 
-  const getStatusBadge = (status: string) => {
-    const badges: Record<string, string> = {
-      completed: "badge-success",
-      pending: "badge-warning",
-      failed: "badge-danger",
-      in_progress: "badge-info",
-    };
-    return badges[status] || "badge-info";
-  };
 
-  const getStatusText = (status: string) => {
-    const texts: Record<string, string> = {
-      completed: "সম্পন্ন",
-      pending: "অপেক্ষমাণ",
-      failed: "ব্যর্থ",
-      in_progress: "চলমান",
+  const getStatusStyle = (status: string): React.CSSProperties => {
+    const styles: Record<string, React.CSSProperties> = {
+      "Sales Generated": { backgroundColor: "#bbf7d0", color: "#14532d", border: "1px solid #4ade80" },
+      "Received": { backgroundColor: "#bbf7d0", color: "#14532d", border: "1px solid #4ade80" },
+      "Not Reachable": { backgroundColor: "#bfdbfe", color: "#1e3a8a", border: "1px solid #60a5fa" },
+      "Not Response": { backgroundColor: "#bfdbfe", color: "#1e3a8a", border: "1px solid #60a5fa" },
+      "Closed": { backgroundColor: "#fecaca", color: "#7f1d1d", border: "1px solid #f87171" },
+      "Scheduled": { backgroundColor: "#fef08a", color: "#713f12", border: "1px solid #facc15" },
+      "Not Relevent": { backgroundColor: "#bfdbfe", color: "#1e3a8a", border: "1px solid #60a5fa" },
     };
-    return texts[status] || status;
+    return styles[status] || { backgroundColor: "#e5e7eb", color: "#1f2937", border: "1px solid #9ca3af" };
   };
 
   if (loading) {
@@ -267,11 +261,10 @@ export default function DashboardPage() {
                 </p>
                 <div className="flex items-center gap-1">
                   <span
-                    className={`text-sm font-medium ${
-                      stat.change.startsWith("+")
-                        ? "text-green-600"
-                        : "text-red-600"
-                    }`}
+                    className={`text-sm font-medium ${stat.change.startsWith("+")
+                      ? "text-green-600"
+                      : "text-red-600"
+                      }`}
                   >
                     {stat.change}
                   </span>
@@ -344,8 +337,11 @@ export default function DashboardPage() {
                     {call.project_name}
                   </td>
                   <td className="py-4 px-4">
-                    <span className={`badge ${getStatusBadge(call.status)}`}>
-                      {getStatusText(call.status)}
+                    <span
+                      className="px-3 py-1 rounded-full text-sm font-medium"
+                      style={getStatusStyle(call.status)}
+                    >
+                      {call.status}
                     </span>
                   </td>
                   <td className="py-4 px-4 text-sm text-gray-500">

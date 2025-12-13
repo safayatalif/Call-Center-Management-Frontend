@@ -95,6 +95,8 @@ export default function MyCustomersPage() {
     bottom?: number;
     right: number;
   }>({ right: 0 });
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [historyCustomer, setHistoryCustomer] = useState<Customer | null>(null);
 
   useEffect(() => {
     fetchProjects();
@@ -175,9 +177,9 @@ export default function MyCustomersPage() {
         : "",
       followuptime: customer.followupdate
         ? new Date(customer.followupdate)
-            .toISOString()
-            .split("T")[1]
-            .substring(0, 5)
+          .toISOString()
+          .split("T")[1]
+          .substring(0, 5)
         : "",
     });
     setIsInteractionModalOpen(true);
@@ -243,16 +245,31 @@ export default function MyCustomersPage() {
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      Pending: "bg-blue-100 text-blue-800",
-      "Sales Generated": "bg-green-100 text-green-800",
-      Received: "bg-teal-100 text-teal-800",
-      "Not Reachable": "bg-orange-100 text-orange-800",
-      "No Responsive": "bg-red-100 text-red-800",
-      Closed: "bg-gray-100 text-gray-800",
-      "Not Relevant": "bg-purple-100 text-purple-800",
-      Scheduled: "bg-indigo-100 text-indigo-800",
+      Pending: "bg-blue-200 text-blue-900 border border-blue-400",
+      "Sales Generated": "bg-green-200 text-green-900 border border-green-400",
+      Received: "bg-teal-200 text-teal-900 border border-teal-400",
+      "Not Reachable": "bg-orange-200 text-orange-900 border border-orange-400",
+      "No Responsive": "bg-yellow-200 text-yellow-900 border border-yellow-400",
+      Closed: "bg-red-200 text-red-900 border border-red-400",
+      "Not Relevant": "bg-purple-200 text-purple-900 border border-purple-400",
+      Scheduled: "bg-indigo-200 text-indigo-900 border border-indigo-400",
     };
-    return colors[status] || "bg-gray-100 text-gray-800";
+    return colors[status] || "bg-gray-200 text-gray-900 border border-gray-400";
+  };
+
+  const getStatusStyle = (status: string): React.CSSProperties => {
+    // Returns inline CSS styles for status badges with vibrant colors
+    const styles: Record<string, React.CSSProperties> = {
+      Pending: { backgroundColor: "#fed7aa", color: "#7c2d12", border: "1px solid #fb923c"},
+      "Sales Generated": { backgroundColor: "#bbf7d0", color: "#14532d", border: "1px solid #4ade80" },
+      Received: { backgroundColor: "#99f6e4", color: "#134e4a", border: "1px solid #2dd4bf" },
+      "Not Reachable": { backgroundColor: "#fed7aa", color: "#7c2d12", border: "1px solid #fb923c" },
+      "No Responsive": { backgroundColor: "#fef08a", color: "#713f12", border: "1px solid #facc15" },
+      Closed: { backgroundColor: "#fecaca", color: "#7f1d1d", border: "1px solid #f87171" },
+      "Not Relevant": { backgroundColor: "#e9d5ff", color: "#581c87", border: "1px solid #a855f7" },
+      Scheduled: { backgroundColor: "#c7d2fe", color: "#312e81", border: "1px solid #818cf8" },
+    };
+    return styles[status] || { backgroundColor: "#e5e7eb", color: "#1f2937", border: "1px solid #9ca3af" };
   };
 
   const formatDate = (dateString: string | null) => {
@@ -622,9 +639,8 @@ export default function MyCustomersPage() {
                       </td>
                       <td className="py-4 px-4">
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(
-                            customer.callstatus
-                          )}`}
+                          className="px-2 py-1 rounded-full text-xs font-semibold"
+                          style={getStatusStyle(customer.callstatus)}
                         >
                           {customer.callstatus}
                         </span>
@@ -641,7 +657,7 @@ export default function MyCustomersPage() {
                         </div>
                       </td>
                       <td className="py-4 px-4 overflow-visible">
-                        <div className="relative">
+                        <div className="relative flex gap-2 justify-end">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -669,14 +685,33 @@ export default function MyCustomersPage() {
                             <span>📞</span>
                             <span>Contact</span>
                             <span
-                              className={`transform transition-transform ${
-                                openCommMenuId === customer.assignno_pk
-                                  ? "rotate-180"
-                                  : ""
-                              }`}
+                              className={`transform transition-transform ${openCommMenuId === customer.assignno_pk
+                                ? "rotate-180"
+                                : ""
+                                }`}
                             >
                               ▼
                             </span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              handleOpenInteraction(customer, "call");
+                              setOpenCommMenuId(null);
+                            }}
+                            className="bg-gradient-to-r from-[#468847] to-[#9DC088] hover:opacity-90 text-white px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-2 transition-all shadow-md whitespace-nowrap"
+                          >
+                            <span>📝</span>
+                            <span>Record</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setHistoryCustomer(customer);
+                              setIsHistoryModalOpen(true);
+                            }}
+                            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:opacity-90 text-white px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-2 transition-all shadow-md whitespace-nowrap"
+                          >
+                            <span>📋</span>
+                            <span>History</span>
                           </button>
 
                           {/* Communication Dropdown Menu */}
@@ -910,19 +945,6 @@ export default function MyCustomersPage() {
                                       )}
                                   </button>
                                 </div>
-
-                                {/* Record Interaction Button */}
-                                <div className="mt-2 pt-2 border-t border-gray-200">
-                                  <button
-                                    onClick={() => {
-                                      handleOpenInteraction(customer, "call");
-                                      setOpenCommMenuId(null);
-                                    }}
-                                    className="w-full bg-gradient-to-r from-[#468847] to-[#9DC088] hover:opacity-90 text-white px-3 py-2 rounded text-sm font-medium"
-                                  >
-                                    📝 Record Interaction
-                                  </button>
-                                </div>
                               </div>
                             </div>
                           )}
@@ -985,11 +1007,10 @@ export default function MyCustomersPage() {
                         <button
                           key={page}
                           onClick={() => setCurrentPage(page)}
-                          className={`px-3 py-1 border rounded-lg text-sm font-medium ${
-                            currentPage === page
-                              ? "bg-[#468847] text-white border-[#468847]"
-                              : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                          }`}
+                          className={`px-3 py-1 border rounded-lg text-sm font-medium ${currentPage === page
+                            ? "bg-[#468847] text-white border-[#468847]"
+                            : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                            }`}
                         >
                           {page}
                         </button>
@@ -1031,8 +1052,8 @@ export default function MyCustomersPage() {
                   {interactionType === "call"
                     ? "📞 Call"
                     : interactionType === "sms"
-                    ? "💬 SMS"
-                    : "📱 WhatsApp"}{" "}
+                      ? "💬 SMS"
+                      : "📱 WhatsApp"}{" "}
                   - {selectedCustomer.custname}
                 </h2>
                 <p className="text-sm text-gray-600">
@@ -1080,11 +1101,10 @@ export default function MyCustomersPage() {
                   <div>
                     <span className="text-gray-600">Target Date:</span>
                     <span
-                      className={`ml-2 font-medium ${
-                        isTargetDateInPast(selectedCustomer.calltargetdate)
-                          ? "text-red-600"
-                          : "text-gray-900"
-                      }`}
+                      className={`ml-2 font-medium ${isTargetDateInPast(selectedCustomer.calltargetdate)
+                        ? "text-red-600"
+                        : "text-gray-900"
+                        }`}
                     >
                       {formatDate(selectedCustomer.calltargetdate)}
                     </span>
@@ -1131,7 +1151,7 @@ export default function MyCustomersPage() {
                   <option value="Sales Generated">Sales Generated</option>
                   <option value="Received">Received</option>
                   <option value="Not Reachable">Not Reachable</option>
-                  <option value="No Responsive">No Responsive</option>
+                  <option value="No Response">No Response</option>
                   <option value="Closed">Closed</option>
                   <option value="Not Relevant">Not Relevant</option>
                   <option value="Scheduled">Scheduled</option>
@@ -1227,6 +1247,115 @@ export default function MyCustomersPage() {
                 }
               >
                 Save Interaction
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Interaction History Modal */}
+      {isHistoryModalOpen && historyCustomer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-96 overflow-auto">
+            <div className="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  📋 Interaction History
+                </h2>
+                <p className="text-sm text-gray-600">
+                  {historyCustomer.custname} ({historyCustomer.custcode})
+                </p>
+              </div>
+              <button
+                onClick={() => setIsHistoryModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-100 border-b-2 border-gray-300">
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                      Total Calls
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                      Total Messages
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                      Priority
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                      Last Called
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                      Follow-up Date
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    style={{ backgroundColor: "#f2f4f8" }}
+                    className="border-b border-gray-200 hover:bg-gray-100 transition-colors"
+                  >
+                    <td className="px-4 py-3 text-sm text-gray-900 font-medium">
+                      {historyCustomer.count_call || 0}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900 font-medium">
+                      {historyCustomer.count_message || 0}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {historyCustomer.callstatus_text ||
+                        historyCustomer.callstatus ||
+                        "-"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {historyCustomer.callpriority || "-"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {historyCustomer.calleddatetime
+                        ? new Date(
+                          historyCustomer.calleddatetime
+                        ).toLocaleDateString()
+                        : "-"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {historyCustomer.followupdate
+                        ? new Date(
+                          historyCustomer.followupdate
+                        ).toLocaleDateString()
+                        : "-"}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {historyCustomer.never_callind === "Y" ? (
+                        <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold">
+                          🚫 DO NOT CALL
+                        </span>
+                      ) : (
+                        <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">
+                          Active
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-2 sticky bottom-0 bg-white">
+              <button
+                onClick={() => setIsHistoryModalOpen(false)}
+                className="px-6 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Close
               </button>
             </div>
           </div>

@@ -427,9 +427,22 @@ export default function TeamsPage() {
                       <td className="py-4 px-4 text-right space-x-2">
                         <button
                           onClick={() => handleManageMembers(team)}
-                          className="text-green-600 hover:text-green-800 font-medium"
+                          className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 hover:text-green-800 transition-colors"
+                          title="Add Members"
                         >
-                          Members
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                            />
+                          </svg>
                         </button>
                         <button
                           onClick={() => handleOpenModal(team)}
@@ -525,11 +538,10 @@ export default function TeamsPage() {
                         <button
                           key={page}
                           onClick={() => handlePageChange(page)}
-                          className={`px-3 py-1 border rounded-lg text-sm font-medium ${
-                            currentPage === page
-                              ? "bg-[#468847] text-white border-[#468847]"
-                              : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                          }`}
+                          className={`px-3 py-1 border rounded-lg text-sm font-medium ${currentPage === page
+                            ? "bg-[#468847] text-white border-[#468847]"
+                            : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                            }`}
                         >
                           {page}
                         </button>

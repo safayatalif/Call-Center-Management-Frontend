@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { customerAPI, projectAPI } from "@/lib/api";
+import * as XLSX from "xlsx";
 
 interface Customer {
   custno_pk: number;
@@ -25,6 +26,7 @@ interface Customer {
   custgender: string | null;
   custbirthdate: string | null;
   custtype: string;
+  customer_type: string | null;
   cust_labeling: string | null;
   project_name: string | null;
   project_code: string | null;
@@ -65,6 +67,10 @@ export default function CustomersPage() {
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
+  const [excelFile, setExcelFile] = useState<File | null>(null);
+  const [excelProjectId, setExcelProjectId] = useState<number | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [formData, setFormData] = useState({
     custcode: "",
@@ -244,14 +250,90 @@ export default function CustomersPage() {
     }
   };
 
+  const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setExcelFile(file);
+  };
+
+  const handleExcelSubmit = async () => {
+    if (!excelFile || !excelProjectId) {
+      alert("Please select a file and a project");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const data = event.target?.result;
+          const workbook = XLSX.read(data, { type: "binary" });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+          // Create customers from Excel data
+          for (const row of jsonData) {
+            const customerData = {
+              custcode: row.custcode || row["Customer Code"] || "",
+              projectno_fk: excelProjectId,
+              countrycode: row.countrycode || row["Country Code"] || "+880",
+              custmobilenumber:
+                row.custmobilenumber || row["Mobile Number"] || "",
+              custemail: row.custemail || row["Email"] || "",
+              custname: row.custname || row["Customer Name"] || "",
+              facebook_link: row.facebook_link || row["Facebook"] || "",
+              linkedin_link: row.linkedin_link || row["LinkedIn"] || "",
+              other_link: row.other_link || row["Other Link"] || "",
+              call_link_type: row.call_link_type || row["Link Type"] || "",
+              text_note: row.text_note || row["Note"] || "",
+              contact_type: row.contact_type || row["Contact Type"] || "",
+              custarea: row.custarea || row["Area"] || "",
+              custfeedback: row.custfeedback || row["Customer Feedback"] || "",
+              agentfeedback: row.agentfeedback || row["Agent Feedback"] || "",
+              never_callind:
+                row.never_callind || row["Do Not Call"] === "Y" ? "Y" : "N",
+              never_callind_message:
+                row.never_callind_message || row["Do Not Call Message"] || "",
+              custgender: row.custgender || row["Gender"] || "",
+              custbirthdate: row.custbirthdate || row["Birth Date"] || "",
+              custtype: row.custtype || row["Type"] || row.customer_type || row["Customer Type"] || "New",
+              cust_labeling: row.cust_labeling || row["Label"] || "",
+              au_orgno: 0,
+            };
+
+            await customerAPI.create(customerData);
+          }
+
+          alert(`Successfully created ${jsonData.length} customers from Excel`);
+          fetchCustomers();
+          setIsExcelModalOpen(false);
+          setExcelFile(null);
+          setExcelProjectId(null);
+        } catch (error: any) {
+          console.error("Error processing Excel:", error);
+          alert("Error processing Excel file: " + error.message);
+        } finally {
+          setIsUploading(false);
+        }
+      };
+      reader.readAsBinaryString(excelFile);
+    } catch (error: any) {
+      console.error("Failed to upload Excel:", error);
+      alert("Failed to upload Excel: " + error.message);
+      setIsUploading(false);
+    }
+  };
+
   const getTypeBadgeColor = (type: string) => {
     const colors: Record<string, string> = {
-      Undefined: "bg-gray-900 text-gray-300",
-      New: "bg-green-900 text-green-300",
-      Regular: "bg-blue-900 text-blue-300",
-      Reorder: "bg-purple-900 text-purple-300",
+      Undefined: "bg-gray-100 text-gray-700",
+      New: "bg-green-100 text-green-700",
+      Regular: "bg-blue-100 text-blue-700",
+      Reorder: "bg-purple-100 text-purple-700",
     };
-    return colors[type] || "bg-gray-900 text-gray-300";
+    return colors[type] || "bg-gray-100 text-gray-700";
   };
 
   return (
@@ -265,12 +347,24 @@ export default function CustomersPage() {
             Manage customers and project assignments
           </p>
         </div>
-        <button
-          onClick={() => handleOpenModal()}
-          className="bg-gradient-to-r from-[#468847] to-[#9DC088] hover:opacity-90 text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 shadow-md"
-        >
-          <span>+</span> Create Customer
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleOpenModal()}
+            className="bg-gradient-to-r from-[#468847] to-[#9DC088] hover:opacity-90 text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 shadow-md"
+          >
+            <span>+</span> Create Customer
+          </button>
+          <button
+            onClick={() => setIsExcelModalOpen(true)}
+            disabled={!projectFilter}
+            className={`${projectFilter
+              ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:opacity-90 text-white"
+              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              } px-4 py-2 rounded-lg transition-all flex items-center gap-2 shadow-md`}
+          >
+            <span>📊</span> Excel Upload
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -427,11 +521,11 @@ export default function CustomersPage() {
                       </td>
                       <td className="py-4 px-4">
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold ${getTypeBadgeColor(
+                          className={`inline-block px-3 py-1 rounded-lg text-sm font-semibold whitespace-nowrap ${getTypeBadgeColor(
                             customer.custtype
                           )}`}
                         >
-                          {customer.custtype}
+                          {customer.custtype || "Unknown"}
                         </span>
                       </td>
                       <td className="py-4 px-4">
@@ -441,9 +535,16 @@ export default function CustomersPage() {
                               href={customer.facebook_link}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-blue-600 hover:text-blue-800"
+                              className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 hover:text-blue-800 transition-colors"
+                              title="Facebook Profile"
                             >
-                              FB
+                              <svg
+                                className="w-5 h-5"
+                                fill="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                              </svg>
                             </a>
                           )}
                           {customer.linkedin_link && (
@@ -451,9 +552,16 @@ export default function CustomersPage() {
                               href={customer.linkedin_link}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-blue-700 hover:text-blue-900"
+                              className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-900 transition-colors"
+                              title="LinkedIn Profile"
                             >
-                              LI
+                              <svg
+                                className="w-5 h-5"
+                                fill="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                              </svg>
                             </a>
                           )}
                         </div>
@@ -555,11 +663,10 @@ export default function CustomersPage() {
                         <button
                           key={page}
                           onClick={() => handlePageChange(page)}
-                          className={`px-3 py-1 border rounded-lg text-sm font-medium ${
-                            currentPage === page
-                              ? "bg-[#468847] text-white border-[#468847]"
-                              : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                          }`}
+                          className={`px-3 py-1 border rounded-lg text-sm font-medium ${currentPage === page
+                            ? "bg-[#468847] text-white border-[#468847]"
+                            : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                            }`}
                         >
                           {page}
                         </button>
@@ -972,6 +1079,114 @@ export default function CustomersPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Excel Upload Modal */}
+      {isExcelModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-900">
+                📊 Upload Customer Excel
+              </h2>
+              <button
+                onClick={() => {
+                  setIsExcelModalOpen(false);
+                  setExcelFile(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Project
+                </label>
+                <select
+                  value={excelProjectId || ""}
+                  onChange={(e) =>
+                    setExcelProjectId(
+                      e.target.value ? Number(e.target.value) : null
+                    )
+                  }
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">-- Select a Project --</option>
+                  {projects.map((project) => (
+                    <option
+                      key={project.projectno_pk}
+                      value={project.projectno_pk}
+                    >
+                      {project.projectname}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Excel File
+                </label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleExcelUpload}
+                    className="hidden"
+                    id="excel-file-input"
+                    disabled={isUploading}
+                  />
+                  <label htmlFor="excel-file-input" className="cursor-pointer">
+                    <div className="text-4xl mb-2">📁</div>
+                    <p className="text-sm text-gray-600">
+                      {excelFile
+                        ? excelFile.name
+                        : "Click to upload or drag and drop"}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      XLSX, XLS, or CSV files
+                    </p>
+                  </label>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-900">
+                  <strong>📋 Excel Format:</strong> Your file should have
+                  columns like: custcode, custname, custmobilenumber, custemail,
+                  custtype, etc.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setIsExcelModalOpen(false);
+                  setExcelFile(null);
+                  setExcelProjectId(null);
+                }}
+                className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
+                disabled={isUploading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleExcelSubmit}
+                disabled={!excelFile || !excelProjectId || isUploading}
+                className={`${!excelFile || !excelProjectId || isUploading
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-gradient-to-r from-blue-500 to-blue-600 hover:opacity-90 text-white"
+                  } px-6 py-2 rounded-lg transition-all shadow-md font-medium`}
+              >
+                {isUploading ? "Uploading..." : "Upload Customers"}
+              </button>
+            </div>
           </div>
         </div>
       )}

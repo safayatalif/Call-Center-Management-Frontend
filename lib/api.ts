@@ -1,5 +1,5 @@
 // API Base URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://call-center-management-frontend.vercel.app/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://call-center-management-backend.vercel.app/api';
 
 /**
  * API Client for making HTTP requests
